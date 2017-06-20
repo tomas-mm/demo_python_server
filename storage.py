@@ -25,7 +25,7 @@ def init_storage(forked=True):
     """
     Create storage singletons 
     if the server is multiprocess (actually creates a local sync manager for users and another for levels)
-    if the server is multithreaded 
+    if the server is multithreaded dictionaries are directly shared using threading.locks to protect them
     """
     singletons['users'] = Users(forked)
     singletons['levels'] = Levels(forked)
@@ -187,4 +187,3 @@ class Levels(object):
         res = self.levels.get(level, {}).items()
         res.sort(key=lambda x: x[1], reverse=True)
         return res
-
