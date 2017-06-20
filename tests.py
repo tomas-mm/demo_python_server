@@ -1,6 +1,8 @@
 import os
 import time
+import random
 import subprocess
+import threading
 import unittest
 import requests
 import storage
@@ -177,6 +179,30 @@ class IntegTestViews(unittest.TestCase):
         exp_res.reverse()
         expected_res = ','.join(exp_res[:NUM_TOP_SCORES])
         res = self.get_high_scores(10)
+        self.assertEquals(res.status_code, 200)
+        self.assertEqual(res.content, expected_res)
+
+    def async_login_and_save_score(self, user, level, score):
+        res = self.login_request(user)
+        self.save_score(res.content, level, score)
+
+    def test_high_score_ok_async(self):
+        threads = []
+        users_and_scores = range(101, 121 + NUM_TOP_SCORES)
+        random.shuffle(users_and_scores)
+        for user in users_and_scores:
+            th = threading.Thread(target=self.async_login_and_save_score, args=(user, 11, user - 100))
+            threads.append(th)
+
+        for th in threads:
+            th.start()
+
+        for th in threads:
+            th.join(2)
+
+        expected_res = ','.join(['%s=%s' % (120 + i, 20 + i) for i in range(NUM_TOP_SCORES, 0, -1)])
+        res = self.get_high_scores(11)
+        self.assertEquals(res.status_code, 200)
         self.assertEqual(res.content, expected_res)
 
     def test_high_score_bad_level(self):
