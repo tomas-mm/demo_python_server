@@ -1,0 +1,4 @@
+# these requirements are only needed to run the integration and unit tests
+
+mock == 2.0.0
+requests == 2.18.1
