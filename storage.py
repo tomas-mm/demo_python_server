@@ -10,25 +10,11 @@ import binascii
 import multiprocessing
 import threading
 
+from users import Users, SESSION_KEY_EXPIRATION
+
 logger = logging.getLogger('storage')
 
 NUM_TOP_SCORES = 15
-SESSION_KEY_EXPIRATION = 600
-
-
-# poor man's dependency injection
-singletons = {'users': None,
-              'levels': None}
-
-
-def init_storage(forked=True):
-    """
-    Create storage singletons 
-    if the server is multiprocess (actually creates a local sync manager for users and another for levels)
-    if the server is multithreaded dictionaries are directly shared using threading.locks to protect them
-    """
-    singletons['users'] = Users(forked)
-    singletons['levels'] = Levels(forked)
 
 
 class UserToken(object):
@@ -93,7 +79,7 @@ class UserToken(object):
         return None
 
 
-class Users(object):
+class UsersStored(Users):
     """
     Manage shared users object
     When created, this will spawn a 'manager' process if forked = True

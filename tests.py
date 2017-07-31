@@ -8,6 +8,7 @@ import requests
 import storage
 from mock import patch
 from storage import NUM_TOP_SCORES, UserToken
+from users import UserTokenSigned
 
 
 class TestUserToken(unittest.TestCase):
@@ -38,6 +39,46 @@ class TestUserToken(unittest.TestCase):
         token = UserToken.get(user_id)
 
         u_id = UserToken.validate(token, 300)
+        self.assertEqual(u_id, None)
+
+
+class TestUserTokenSigned(unittest.TestCase):
+    def setUp(self):
+        self.time = time.time()
+        self.secret = 'secret_key_dadfgwrhghwhgreqhththwmkwrmrgnwkbjk23e3243dada3d"$%&/()=fagagfg34rf4*z<1fg56&'
+        self.token = 'AAAAZ1l_VM2WQgJ-3rNFUJ3S8gF5-0sQLDLFCg=='
+        self.token_time = 1501517005
+
+    def test_get(self):
+        token = UserTokenSigned.get(103, self.secret)
+        self.assertTrue(len(token) == 40)
+
+    @patch.object(storage.time, 'time')
+    def test_validate(self, time_mock):
+        time_mock.return_value = self.token_time + 10
+        user_id = UserTokenSigned.validate(self.token, 60, self.secret)
+        self.assertEqual(user_id, 103)
+
+    @patch.object(storage.time, 'time')
+    def test_validate_ko_mangled_token(self, time_mock):
+        time_mock.return_value = self.token_time + 10
+        mangled_token = 'AB' + self.token[2:]  # user_id = 1048679
+        user_id = UserTokenSigned.validate(mangled_token, 60, self.secret)
+        self.assertEqual(user_id, None)
+
+    def test_validate_ok(self):
+        user_id = 103
+        token = UserTokenSigned.get(user_id, self.secret)
+        u_id = UserTokenSigned.validate(token, 1, self.secret)
+        self.assertEqual(u_id, user_id)
+
+    @patch.object(storage.time, 'time')
+    def test_validate_timeout(self, time_mock):
+        user_id = 103
+        time_mock.side_effect = [self.time, self.time + 500]
+        token = UserTokenSigned.get(user_id, self.secret)
+
+        u_id = UserTokenSigned.validate(token, 300, self.secret)
         self.assertEqual(u_id, None)
 
 
@@ -82,7 +123,7 @@ class IntegTestViews(unittest.TestCase):
         dir_name = os.path.dirname(__file__)
         server_main = os.path.join(dir_name, 'run_server.py')
         fnull = open(os.devnull, 'w')
-        cls.server_proc = subprocess.Popen(['python', server_main, '-p', cls.DEFAULT_PORT],
+        cls.server_proc = subprocess.Popen(['python', server_main, '-p', cls.DEFAULT_PORT, '--store_tokens'],
                                            shell=False, stdout=fnull, stderr=subprocess.STDOUT)
         time.sleep(0.3)
 
@@ -183,8 +224,15 @@ class IntegTestViews(unittest.TestCase):
         self.assertEqual(res.content, expected_res)
 
     def async_login_and_save_score(self, user, level, score):
-        res = self.login_request(user)
-        self.save_score(res.content, level, score)
+        retry = 5
+        while retry:
+            try:
+                res = self.login_request(user)
+                self.save_score(res.content, level, score)
+                break
+            except:
+                time.sleep(.15)
+                retry -= 1
 
     def test_high_score_ok_async(self):
         threads = []
@@ -198,7 +246,7 @@ class IntegTestViews(unittest.TestCase):
             th.start()
 
         for th in threads:
-            th.join(2)
+            th.join(5)
 
         expected_res = ','.join(['%s=%s' % (120 + i, 20 + i) for i in range(NUM_TOP_SCORES, 0, -1)])
         res = self.get_high_scores(11)
@@ -232,9 +280,25 @@ class IntegTestViewsTh(IntegTestViews):
         dir_name = os.path.dirname(__file__)
         server_main = os.path.join(dir_name, 'run_server.py')
         fnull = open(os.devnull, 'w')
-        cls.server_proc = subprocess.Popen(['python', server_main, '-p', cls.DEFAULT_PORT, '--threaded'],
+        cls.server_proc = subprocess.Popen(['python', server_main, '-p', cls.DEFAULT_PORT, '--threaded', '--store_tokens'],
                                            shell=False, stdout=fnull, stderr=subprocess.STDOUT)
         time.sleep(0.3)
+
+
+class IntegTestViewsNonStoredUsers(IntegTestViews):
+    @classmethod
+    def setUpClass(cls):
+        dir_name = os.path.dirname(__file__)
+        server_main = os.path.join(dir_name, 'run_server.py')
+        fnull = open(os.devnull, 'w')
+        cls.server_proc = subprocess.Popen(['python', server_main, '-p', cls.DEFAULT_PORT],
+                                           shell=False, stdout=fnull, stderr=subprocess.STDOUT)
+        time.sleep(0.3)
+
+    def test_login_ok(self):
+        res = self.login_request(4711)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(len(res.content), 40)
 
 
 if __name__ == '__main__':

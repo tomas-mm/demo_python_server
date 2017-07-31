@@ -1,4 +1,4 @@
-from storage import singletons
+from bootstrap import singletons
 from responses import *
 
 

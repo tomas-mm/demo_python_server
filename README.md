@@ -31,6 +31,9 @@ To get more help:
                             or forked (integration tests run in 45% of the time
                             used by multiprocess in a dual core i5 laptop)
       --logfile LOGFILE     Log file path [default: /tmp/basic_test_server.log]
+      --store_tokens        Store the user tokens in memory (only one token is
+                            valid per user at any time) if the tokens are not
+                            stored, they are only invalidated by expiration time
 
 
 ## Run unit tests and integration tests
