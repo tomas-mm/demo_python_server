@@ -2,6 +2,7 @@ import time
 import struct
 import base64
 import hashlib
+import hmac
 from abc import ABCMeta, abstractmethod
 
 
@@ -38,7 +39,7 @@ class UserTokenSigned(object):
         user_id (uint32) timestamp(uint32) sha1(160bits)
         """
         timestamp = int(time.time())
-        hash_obj = hashlib.sha1('%s:%s:%s' % (user_id, timestamp, secret))
+        hash_obj = hmac.new(secret, '%s:%s' % (user_id, timestamp), hashlib.sha1)
         hash_digest = hash_obj.digest()
 
         token = struct.pack('!II20B', user_id, timestamp, *[ord(i) for i in hash_digest])
@@ -56,7 +57,7 @@ class UserTokenSigned(object):
             user_id = token_parts[0]
             timestamp = token_parts[1]
             hash_digest = ''.join(chr(i) for i in token_parts[2:])
-            expected_hash = hashlib.sha1('%s:%s:%s' % (user_id, timestamp, secret))
+            expected_hash = hmac.new(secret, '%s:%s' % (user_id, timestamp), hashlib.sha1)
 
             if expected_hash.digest() == hash_digest:
                 now = time.time()

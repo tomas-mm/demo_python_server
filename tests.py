@@ -46,8 +46,8 @@ class TestUserTokenSigned(unittest.TestCase):
     def setUp(self):
         self.time = time.time()
         self.secret = 'secret_key_dadfgwrhghwhgreqhththwmkwrmrgnwkbjk23e3243dada3d"$%&/()=fagagfg34rf4*z<1fg56&'
-        self.token = 'AAAAZ1l_VM2WQgJ-3rNFUJ3S8gF5-0sQLDLFCg=='
-        self.token_time = 1501517005
+        self.token = 'AAAAZ1l_x077FM330kBbX36Qcj_-UDtlJSjbKw=='
+        self.token_time = 1501546318
 
     def test_get(self):
         token = UserTokenSigned.get(103, self.secret)
